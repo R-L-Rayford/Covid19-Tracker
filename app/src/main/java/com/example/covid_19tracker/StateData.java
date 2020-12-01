@@ -1,26 +1,32 @@
 package com.example.covid_19tracker;
 
 import android.util.Log;
-import android.widget.Toast;
 
 import java.io.Serializable;
-import java.util.Vector;
 
+/*
+* Data holding class that holds Covid-19 related data on a US State.*/
 public class StateData implements Serializable {
 
-    //Any null values read in will be stored as "N/A" in the vectors.
-    // State initials.
-    private String stateID;
-    // State name.
+    // State's initials.
+    private String state;
+    // State's name.
     private String stateName;
     // Number of positive Covid-19 tests in this state.
-    private int positiveResults;
+    private int positive;
     // Number of reported Covid-19 related deaths in this state.
-    private int deaths;
+    private int death;
     // Number of reported people currently hospitalized from Covid-19 in this state.
-    private int hospitalizedCurrent;
+    private int hospitalizedCurrently;
 
-    private String[][] stateNameList = {{"AL", "Alabama"}, {"AK", "Alaska"}, {"AZ", "Arizona"},
+    private int positiveIncrease;
+
+    private int deathIncrease;
+
+    private int hospitalizedIncrease;
+
+    //Used to find the full name of a state based on the initials.
+    public static final String[][] stateNameList = {{"AL", "Alabama"}, {"AK", "Alaska"}, {"AZ", "Arizona"},
             {"AR", "Arkansas"}, {"CA", "California"}, {"CO", "Colorado"}, {"CT", "Connecticut"},
             {"DE", "Delaware"}, {"FL", "Florida"}, {"GA", "Georgia"}, {"HI", "Hawaii"},
             {"ID", "Idaho"}, {"IL", "Illinois"}, {"IN", "Indiana"}, {"IA", "Iowa"},
@@ -35,41 +41,67 @@ public class StateData implements Serializable {
             {"WV", "West Virginia"}, {"WI", "Wisconsin"}, {"WY", "Wyoming"}};
 
     public StateData(){
-        //
-        //Maybe include a long switch statement adding the full name of a state based on the passed in initials...
     }
 
-    //I'll add better comments later.
-    //These are for getting individual values out of the Vector lists.
-    public String getStateInitials() {
-        return stateID;
+    public String getState() {
+        return state;
     }
 
     public String getStateName() {
         return stateName;
     }
 
-    public int getPosResult() {
-        return positiveResults;
+    public int getPositive() {
+        return positive;
     }
 
-    public int getDeaths() {
-        return deaths;
+    public int getDeath() {
+        return death;
     }
 
-    public int getHospCur() {
-        return hospitalizedCurrent;
+    public int getHospitalizedCurrently() {
+        return hospitalizedCurrently;
     }
 
-    public void setStateInitials(String iD) {
-        this.stateID = iD;
-        this.setStateName(iD);
+    public int getPositiveIncrease() {return positiveIncrease; }
+
+    public int getDeathIncrease() {return deathIncrease; }
+
+    public int getHospitalizedIncrease() {return hospitalizedIncrease; }
+
+    /*
+    * Sets this State's initials (state) and full name (StateName).
+    * The full name of a state is not pulled in when grabbing the Covid-19 data
+    * so it must be determined and set based on the initials.
+    * */
+    public void setState(String id) {
+        this.state = id;
+        this.setStateName(id);
     }
 
-    /*Given the intials of a state, traverse through the array stateNameList and
-    * find the state name that matches the initials. Sets StateData's stateName variable equal to
-    * the found name.*/
-    public void setStateName(String initials) {
+    public void setStateName(String id){ this.stateName = findStateName(id); }
+
+    public void setPositive(int posRes) {
+        this.positive = posRes;
+    }
+
+    public void setDeath(int dead) { this.death = dead; }
+
+    public void setHospitalizedCurrently(int hospCur) {
+        this.hospitalizedCurrently = hospCur;
+    }
+
+    public void setPositiveIncrease(int posIncrease){ this.positiveIncrease = posIncrease; }
+
+    public void setDeathIncrease(int deathsIncrease){ this.deathIncrease = deathsIncrease; }
+
+    public void setHospitalizedIncrease(int hospIncrease){ this.hospitalizedIncrease = hospIncrease; }
+
+    /*Given the initials of a state, traverse through the array stateNameList and
+     * find the state name that matches the initials. Sets StateData's stateName variable equal to
+     * the found name.
+     * @return tempName - The full state name of the given state initials. N/A if no name is found.*/
+    public static String findStateName(String initials) {
         String tempName = "N/A";
         int nameIndex = -1;
 
@@ -83,20 +115,9 @@ public class StateData implements Serializable {
         if(nameIndex > -1){
             tempName = stateNameList[nameIndex][1];
         } else {
-            //Log.i("State name ", "not found");
+            Log.i("State name ", "State name for " + initials + "not found.");
         }
 
-        this.stateName = tempName;
-        Log.i("Check", "State initals to name check: " + initials + ":" +tempName);
-    }
-
-    public void setPosResult(int posRes) {
-        this.positiveResults = posRes;
-    }
-
-    public void setDeaths(int dead) { this.deaths = dead; }
-
-    public void setHospCur(int hospCur) {
-        this.hospitalizedCurrent = hospCur;
+        return tempName;
     }
 }

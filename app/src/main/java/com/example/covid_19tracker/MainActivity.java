@@ -16,10 +16,17 @@ import android.widget.Toast;
 
 
 import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.CameraPosition;
+import com.google.android.gms.maps.model.LatLng;
 
+import org.json.JSONException;
+
+import java.lang.reflect.MalformedParameterizedTypeException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.EmptyStackException;
+import java.util.List;
 
 public class MainActivity
         extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
@@ -49,6 +56,18 @@ public class MainActivity
         // that we have given in .XML file
         sortedStateList = findViewById(R.id.sortedStateList);
         spinnerSetup(); // Initialize spinners (drop-down lists)
+
+        //Initial API data pulling.
+        fetchData();
+        createMap();
+    }
+
+    private void createMap() {
+
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.heatMap);
+        MapActivity mapActivity = new MapActivity(this.getApplicationContext(), mapFragment, stateList);
+
     }
 
     /*---------------------------------------------------
@@ -106,23 +125,36 @@ public class MainActivity
         Use getter methods on state class to access data
     ---------------------------------------------------*/
     public void fetchData() {
-        //Test check to see if fetchData recognizes stateList as already filled with
-        // data if you click it a second time.
-        if (stateList != null && stateList.size() > 0) {
-            int testLength = stateList.size();
-
-            Log.i("Check", "ArrayList SECONDARY Length Check: " + testLength);
-        }
         this.stateList = new ArrayList<StateData>();
-        this.handler = new DataHandler(this.getApplicationContext());
-        stateList = handler.pullData(stateList);
-        populateStateList();
+        DataHandler dataPuller = new DataHandler(this.getApplicationContext(), this.stateList);
+        dataPuller.start();
+
+        /*While the Retrofit library does provide synchronously JSON pulling,
+        some actions in DataHandler don't behave synchronously without the use of join()
+        forcing the main thread (MainActivity) to wait for DataHandler.*/
+        try {
+            dataPuller.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        stateList = dataPuller.getData();
+
+        sortStateList(getMetric(), getSortBy());
+
         Toast toast = Toast.makeText(this, "Fetching data", Toast.LENGTH_SHORT);
         toast.show();
 
-        int testLength = stateList.size();
-
+        //Test code for checking if State data was pulled in correctly.
+        /*int testLength = stateList.size();
         Log.i("Check", "ArrayList Length Check: " + testLength);
+
+
+=======
+        int test1 = stateList.get(0).getPositiveIncrease();
+        int test2 = stateList.get(3).getDeathIncrease();
+        int test3 = stateList.get(5).getHospitalizedIncrease();
+        Log.i("Check", "Variables Check: " + test1 + " | " + test2 + " | " + test3 + " | ");*/
+
     }
 
     /*---------------------------------------------------
@@ -189,37 +221,37 @@ public class MainActivity
         Currently a dummy-list of 5 states is created for testing purposes
     ---------------------------------------------------*/
     private void populateStateList() {
-
+        /*
         // TEMP STATE DATA
         StateData california = new StateData();
-        california.setStateInitials("CA");
-        california.setDeaths(50000);
-        california.setHospCur(2000);
-        california.setPosResult(249);
+        california.setState("CA");
+        california.setDeath(50000);
+        california.setHospitalizedCurrently(2000);
+        california.setPositive(249);
 
         StateData michigan = new StateData();
-        michigan.setStateInitials("MI");
-        michigan.setDeaths(3500);
-        michigan.setHospCur(1570);
-        michigan.setPosResult(499);
+        michigan.setState("MI");
+        michigan.setDeath(3500);
+        michigan.setHospitalizedCurrently(1570);
+        michigan.setPositive(499);
 
         StateData florida = new StateData();
-        florida.setStateInitials("FL");
-        florida.setDeaths(4500);
-        florida.setHospCur(1600);
-        florida.setPosResult(9999);
+        florida.setState("FL");
+        florida.setDeath(4500);
+        florida.setHospitalizedCurrently(1600);
+        florida.setPositive(9999);
 
         StateData ohio = new StateData();
-        ohio.setStateInitials("OH");
-        ohio.setDeaths(5600);
-        ohio.setHospCur(800);
-        ohio.setPosResult(1999);
+        ohio.setState("OH");
+        ohio.setDeath(5600);
+        ohio.setHospitalizedCurrently(800);
+        ohio.setPositive(1999);
 
         StateData texas = new StateData();
-        texas.setStateInitials("TX");
-        texas.setDeaths(1000);
-        texas.setHospCur(10000);
-        texas.setPosResult(3999);
+        texas.setState("TX");
+        texas.setDeath(1000);
+        texas.setHospitalizedCurrently(10000);
+        texas.setPositive(3999);
 
         // TO_DO - REPLACE tempStateList WITH stateList ONCE IMPLEMENTED
         tempStateList.add(california);
@@ -228,9 +260,7 @@ public class MainActivity
         tempStateList.add(ohio);
         tempStateList.add(texas);
 
-        currentState = michigan;
-
-        sortStateList(getMetric(), getSortBy());
+        currentState = michigan; */
     }
 
     /*---------------------------------------------------
@@ -239,9 +269,9 @@ public class MainActivity
     ---------------------------------------------------*/
     public StateData selectState(String stateName) {
         StateData current = null;
-        for (int i = 0; i < tempStateList.size(); i++) {
-            if (stateName.equals(tempStateList.get(i).getStateName()))
-                current = tempStateList.get(i);
+        for (int i = 0; i < stateList.size(); i++) {
+            if (stateName.equals(stateList.get(i).getStateName()))
+                current = stateList.get(i);
         }
         return current;
     }
@@ -251,9 +281,9 @@ public class MainActivity
     ---------------------------------------------------*/
     public void printStateList() {
         String stateString = "";
-        for (int i = 0; i < tempStateList.size(); i++) {
+        for (int i = 0; i < stateList.size(); i++) {
             Integer temp = i + 1;
-            stateString = stateString + temp.toString() + ". " + tempStateList.get(i).getStateName() + "\n";
+            stateString = stateString + temp.toString() + ". " + stateList.get(i).getStateName() + "\n";
         }
         sortedStateList.setText(stateString);
     }
@@ -269,57 +299,57 @@ public class MainActivity
         //SORT BY CASES
         if (metric == CASES) {
             // Sort by ASC
-            int n = tempStateList.size();
+            int n = stateList.size();
             for (int i = 0; i < n - 1; i++) {
                 for (int j = 0; j < n - i - 1; j++) {
-                    if (tempStateList.get(j).getPosResult() > tempStateList.get(j + 1).getPosResult()) {
-                        StateData temp = tempStateList.get(j);
-                        tempStateList.set(j, tempStateList.get(j + 1));
-                        tempStateList.set(j + 1, temp);
+                    if (stateList.get(j).getPositive() > stateList.get(j + 1).getPositive()) {
+                        StateData temp = stateList.get(j);
+                        stateList.set(j, stateList.get(j + 1));
+                        stateList.set(j + 1, temp);
                     }
                 }
             }
             // IF DESC, reverse order
             if (sortBy == DESC) {
-                Collections.reverse(tempStateList);
+                Collections.reverse(stateList);
             }
         }
 
         //SORT BY DEATHS
         if (metric == DEATHS) {
             // Sort by ASC
-            int n = tempStateList.size();
+            int n = stateList.size();
             for (int i = 0; i < n - 1; i++) {
                 for (int j = 0; j < n - i - 1; j++) {
-                    if (tempStateList.get(j).getDeaths() > tempStateList.get(j + 1).getDeaths()) {
-                        StateData temp = tempStateList.get(j);
-                        tempStateList.set(j, tempStateList.get(j + 1));
-                        tempStateList.set(j + 1, temp);
+                    if (stateList.get(j).getDeath() > stateList.get(j + 1).getDeath()) {
+                        StateData temp = stateList.get(j);
+                        stateList.set(j, stateList.get(j + 1));
+                        stateList.set(j + 1, temp);
                     }
                 }
             }
             // IF DESC, reverse order
             if (sortBy == DESC) {
-                Collections.reverse(tempStateList);
+                Collections.reverse(stateList);
             }
         }
 
         //SORT BY HOSPITALIZATIONS
         if (metric == HOSPITALIZED) {
             // Sort by ASC
-            int n = tempStateList.size();
+            int n = stateList.size();
             for (int i = 0; i < n - 1; i++) {
                 for (int j = 0; j < n - i - 1; j++) {
-                    if (tempStateList.get(j).getHospCur() > tempStateList.get(j + 1).getHospCur()) {
-                        StateData temp = tempStateList.get(j);
-                        tempStateList.set(j, tempStateList.get(j + 1));
-                        tempStateList.set(j + 1, temp);
+                    if (stateList.get(j).getHospitalizedCurrently() > stateList.get(j + 1).getHospitalizedCurrently()) {
+                        StateData temp = stateList.get(j);
+                        stateList.set(j, stateList.get(j + 1));
+                        stateList.set(j + 1, temp);
                     }
                 }
             }
             // IF DESC, reverse order
             if (sortBy == DESC) {
-                Collections.reverse(tempStateList);
+                Collections.reverse(stateList);
             }
         }
         printStateList();
